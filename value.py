@@ -4,7 +4,7 @@ class Value:
         self.data = data
         self.grad = 0.0
         self.prev = children
-        self.backward = lambda: None  # default none backward
+        self._backward = lambda: None  # default none backward
 
     def __add__(self, other):
         if isinstance(other, int):
@@ -16,7 +16,7 @@ class Value:
             # already have out.grad here?
             self.grad = out.grad * 1
             other.grad = out.grad * 1
-        out.backward = _backward
+        out._backward = _backward
 
         return out
     
@@ -28,11 +28,31 @@ class Value:
         def _backward():
             self.grad = out.grad * other.data
             other.grad = out.grad * self.data
-        out.backward = _backward
+        out._backward = _backward
 
         return out
+    
+    def backward(self):
+        from collections import deque
+        topo_sort = []
+        visited = set()
+        visited.add(self)
+        # Loss (final node) is the only one with 0 "indegrees", so start from it
+        queue = deque([self])
+        while queue:
+            node = queue.popleft()
+            topo_sort.append(node)            
+            for prev in node.prev:
+                if prev not in visited:
+                    visited.add(prev)  # equivalent to "removing node" from graph
+                    queue.append(prev)
+        
+        print("topo sort:", topo_sort)
+        self.grad = 1.0
+        for node in topo_sort:
+            node._backward()
 
-    def __neg__(self, other):
+    def __neg__(self):
         return self * -1
 
     def __sub__(self, other):

@@ -16,8 +16,8 @@ class Value:
 
         def _backward():
             # already have out.grad here?
-            self.grad = out.grad * 1
-            other.grad = out.grad * 1
+            self.grad += out.grad * 1
+            other.grad += out.grad * 1
         out._backward = _backward
 
         return out
@@ -28,8 +28,8 @@ class Value:
         out = Value(self.data * other.data, children=(self, other), _op='*')
 
         def _backward():
-            self.grad = out.grad * other.data
-            other.grad = out.grad * self.data
+            self.grad += out.grad * other.data
+            other.grad += out.grad * self.data
         out._backward = _backward
 
         return out
@@ -49,7 +49,6 @@ class Value:
                     visited.add(prev)  # equivalent to "removing node" from graph
                     queue.append(prev)
         
-        print("topo sort:", topo_sort)
         self.grad = 1.0
         for node in topo_sort:
             node._backward()
@@ -112,10 +111,17 @@ def draw_graph(root):
     return dot
     
 if __name__ == '__main__':
-    v1 = Value(2.0)
-    v2 = Value(3.0)
+    v1 = Value(2.0, label='v1')
+    v2 = Value(3.0, label='v2')
+    print(v1, v2)
     v3 = v1 * v2
-    v3.grad = 1.0
-    print(v3)
-    v3.backward()
-    print(v3)
+    v3.label = 'v3'
+    v4 = v3 + v1
+    v4.grad = 1.0
+    v4.label = 'v4'
+    print(v4)
+    v4.backward()
+    graph = draw_graph(v4)
+    graph.view()
+    print(v4)
+    print(v1, v2)

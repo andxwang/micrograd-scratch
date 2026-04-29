@@ -1,6 +1,6 @@
 class Value:
 
-    def __init__(self, data: int, children=(), label='', _op=''):
+    def __init__(self, data: int | float, children=(), label='', _op=''):
         self.data = data
         self.grad = 0.0
         self.prev = children
@@ -23,7 +23,7 @@ class Value:
         return out
     
     def __mul__(self, other):
-        if isinstance(other, int):
+        if isinstance(other, (int, float)):
             other = Value(other)
         out = Value(self.data * other.data, children=(self, other), _op='*')
 
@@ -57,7 +57,21 @@ class Value:
         return self * -1
 
     def __sub__(self, other):
-        return self.__add__(-other)
+        return self + (-other)
+    
+    def __radd__(self, other): # other + self
+        return self + other
+
+    def tanh(self):
+        import math
+        t = math.tanh(self.data)
+        out = Value(t, children=(self,), _op='tanh')
+        
+        def _backward():
+            self.grad += out.grad * (1 - t**2)
+        out._backward = _backward
+        
+        return out
 
     def __repr__(self):
         return f"Value({self.label}: data={self.data}, grad={self.grad})"
@@ -120,8 +134,10 @@ if __name__ == '__main__':
     v4.grad = 1.0
     v4.label = 'v4'
     print(v4)
-    v4.backward()
-    graph = draw_graph(v4)
+    o = v4.tanh()
+    o.label = 'o'
+    o.backward()
+    graph = draw_graph(o)
     graph.view()
-    print(v4)
+    print(o)
     print(v1, v2)
